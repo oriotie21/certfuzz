@@ -1,3 +1,45 @@
+### BEGIN LICENSE ###
+### Use of the CERT Basic Fuzzing Framework (BFF) and related source code is
+### subject to the following terms:
+### 
+### # LICENSE #
+### 
+### Copyright (C) 2010-2016 Carnegie Mellon University. All Rights Reserved.
+### 
+### Redistribution and use in source and binary forms, with or without
+### modification, are permitted provided that the following conditions are met:
+### 
+### 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following acknowledgments and disclaimers.
+### 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following acknowledgments and disclaimers in the documentation and/or other materials provided with the distribution.
+### 3. Products derived from this software may not include "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" in the name of such derived product, nor shall "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" be used to endorse or promote products derived from this software without prior written permission. For written permission, please contact permission@sei.cmu.edu.
+### 
+### # ACKNOWLEDGMENTS AND DISCLAIMERS: #
+### Copyright (C) 2010-2016 Carnegie Mellon University
+### 
+### This material is based upon work funded and supported by the Department of
+### Homeland Security under Contract No. FA8721-05-C-0003 with Carnegie Mellon
+### University for the operation of the Software Engineering Institute, a federally
+### funded research and development center.
+### 
+### Any opinions, findings and conclusions or recommendations expressed in this
+### material are those of the author(s) and do not necessarily reflect the views of
+### the United States Departments of Defense or Homeland Security.
+### 
+### NO WARRANTY. THIS CARNEGIE MELLON UNIVERSITY AND SOFTWARE ENGINEERING INSTITUTE
+### MATERIAL IS FURNISHED ON AN "AS-IS" BASIS. CARNEGIE MELLON UNIVERSITY MAKES NO
+### WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED, AS TO ANY MATTER
+### INCLUDING, BUT NOT LIMITED TO, WARRANTY OF FITNESS FOR PURPOSE OR
+### MERCHANTABILITY, EXCLUSIVITY, OR RESULTS OBTAINED FROM USE OF THE MATERIAL.
+### CARNEGIE MELLON UNIVERSITY DOES NOT MAKE ANY WARRANTY OF ANY KIND WITH RESPECT
+### TO FREEDOM FROM PATENT, TRADEMARK, OR COPYRIGHT INFRINGEMENT.
+### 
+### This material has been approved for public release and unlimited distribution.
+### 
+### CERT(R) is a registered mark of Carnegie Mellon University.
+### 
+### DM-0000736
+### END LICENSE ###
+
 '''
 Created on Oct 11, 2012
 
@@ -32,7 +74,6 @@ logger = logging.getLogger(__name__)
 # going to abort the minimization early
 MAX_OTHER_CRASHES = 20
 
-
 class Minimizer(object):
     use_watchdog = False
     _debugger_cls = None
@@ -40,7 +81,7 @@ class Minimizer(object):
     def __init__(self, cfg=None, testcase=None, crash_dst_dir=None,
                  seedfile_as_target=False, bitwise=False, confidence=0.999,
                  logfile=None, tempdir=None, maxtime=3600, preferx=True, keep_uniq_faddr=False, watchcpu=False):
-
+	
         if not cfg:
             self._raise('Config must be specified')
         if not testcase:
@@ -68,7 +109,7 @@ class Minimizer(object):
         self.log_file_hdlr = None
         self.backtracelevels = 5
         self.watchdogfile = '/tmp/bff_watchdog'
-
+	
         logger.setLevel(logging.INFO)
 
         self.saved_arcinfo = None
@@ -80,7 +121,6 @@ class Minimizer(object):
             self.tempdir = tempfile.mkdtemp(prefix='minimizer_')
 
         logger.debug('Minimizer tempdir is %s', self.tempdir)
-
         # decide whether we're doing a bitwise comparison or bytewise
         if self.bitwise:
             self.hd_func = hamming.bitwise_hd
@@ -124,7 +164,6 @@ class Minimizer(object):
             self._raise("%s does not exist" % self.crash_dst)
         if not os.path.isdir(self.crash_dst):
             self._raise("%s is not a directory" % self.crash_dst)
-
         self._logger_setup()
         self.logger.info(
             "Minimizer initializing for %s", self.testcase.fuzzedfile.path)
@@ -164,16 +203,13 @@ class Minimizer(object):
 
         self.fuzzed_content = self._read_fuzzed()
         self.seed = self._read_seed()
-
         # none of this will work if the files are of different size
         if len(self.seed) != len(self.fuzzed_content):
             self._raise('Minimizer requires seed and fuzzed_content to have the same length. %d != %d' % (
                 len(self.seed), len(self.fuzzed_content)))
-
         # initialize the hamming distance
         self.start_distance = self.hd_func(self.seed, self.fuzzed_content)
         self.min_distance = self.start_distance
-
         # some programs testcase differently depending on where the
         # file is loaded from. So we'll reuse this file name for
         # everything
@@ -186,16 +222,6 @@ class Minimizer(object):
         f.close()
         self.tempfile = f.name
         filetools.copy_file(self.testcase.fuzzedfile.path, self.tempfile)
-
-        if 'copyfuzzedto' in self.cfg['target']:
-            copyfuzzedto = str(self.cfg['target'].get('copyfuzzedto', ''))
-            logger.debug("Copying fuzzed file to " + copyfuzzedto)
-            filetools.copy_file(self.testcase.fuzzedfile.path, copyfuzzedto)
-
-        if 'postprocessfuzzed' in self.cfg['target']:
-            postprocessfuzzed = str(self.cfg['target']['postprocessfuzzed'])
-            logger.debug("Executing postprocess " + postprocessfuzzed)
-            os.system(postprocessfuzzed)
 
         # figure out what testcase signatures belong to this fuzzedfile
         self.debugger_timeout = self.cfg['debugger']['runtimeout']
@@ -238,6 +264,7 @@ class Minimizer(object):
         self.logger.removeHandler(self.log_file_hdlr)
         if not etype:
             # clean exit, clean up
+	    print("removing "+self.tempdir)
             filetools.delete_files_or_dirs([self.tempdir])
         # remove the watchdog file
 #        try:
@@ -267,7 +294,7 @@ class Minimizer(object):
             return self._readzip(self.testcase.fuzzedfile.path)
 
         return self.testcase.fuzzedfile.read()
-
+	
     def _read_seed(self):
         '''
         returns the contents of the seed file
@@ -283,7 +310,7 @@ class Minimizer(object):
             return self.minchar * len(self.fuzzed_content)
         else:
             return text.metasploit_pattern_orig(len(self.fuzzed_content))
-
+	
     def _readzip(self, filepath):
         # If the seed is zip-based, fuzz the contents rather than the container
         logger.debug('Reading zip file: %s', filepath)
@@ -380,11 +407,10 @@ class Minimizer(object):
             (fd, f) = tempfile.mkstemp(
                 prefix='minimizer_set_crash_hashes_', text=True, dir=self.tempdir)
             os.close(fd)
-            delete_files(f)
+            delete_files(f) #not deleting directory
 
             # run debugger
             start = time.time()
-
             dbg = self.run_debugger(self.tempfile, f)
 
             # remember the elapsed time for later
@@ -425,7 +451,7 @@ class Minimizer(object):
     def run_debugger(self, infile, outfile):
         self.debugger_runs += 1
         cmd_args = get_command_args_list(
-            self.cfg['target']['cmdline_template'], infile)[1]
+            self.cfg['target']['cmdline_template'], infile, name=self.cfg['target']['name'])[1] #minimizer not working fixed
         cmd = cmd_args[0]
         cmd_args = cmd_args[1:]
 
@@ -450,7 +476,7 @@ class Minimizer(object):
         self.logger.debug('Building new testcase object.')
 
         # copy our original testcase as the basis for the new testcase
-        new_testcase = copy.deepcopy(self.testcase)
+        new_testcase = copy.copy(self.testcase)
 
         # get a new dir for the next crasher
         newcrash_tmpdir = tempfile.mkdtemp(
@@ -473,17 +499,7 @@ class Minimizer(object):
         self.logger.debug('\tCopying %s to %s', self.tempfile, outfile)
         filetools.copy_file(self.tempfile, outfile)
 
-        if 'copyfuzzedto' in self.cfg['target']:
-            copyfuzzedto = str(self.cfg['target'].get('copyfuzzedto', ''))
-            logger.debug("Copying fuzzed file to " + copyfuzzedto)
-            filetools.copy_file(self.tempfile, copyfuzzedto)
-
-        if 'postprocessfuzzed' in self.cfg['target']:
-            postprocessfuzzed = str(self.cfg['target']['postprocessfuzzed'])
-            logger.debug("Executing postprocess " + postprocessfuzzed)
-            os.system(postprocessfuzzed)
-
-        new_testcase.fuzzedfile = BasicFile(outfile)
+        new_testcase.fuzzedfile = BasicFile(outfile, self.cfg['target']['mutate'])
         self.logger.debug('\tNew fuzzed_content file: %s %s',
                           new_testcase.fuzzedfile.path, new_testcase.fuzzedfile.md5)
 
@@ -536,8 +552,8 @@ class Minimizer(object):
         os.close(fd)
         if os.path.exists(f):
             delete_files(f)
-        if os.path.exists(f):
-            raise MinimizerError('Unable to get temporary debug file')
+        #if os.path.exists(f):
+        #    raise MinimizerError('Unable to get temporary debug file')
 
         # create debugger output
         dbg = self.run_debugger(self.tempfile, f)
@@ -656,20 +672,10 @@ class Minimizer(object):
 
     def _write_file(self):
         if self.is_zipfile:
+	   
             self._writezip()
         else:
             write_file(''.join(self.newfuzzed), self.tempfile)
-
-        if 'copyfuzzedto' in self.cfg['target']:
-            copyfuzzedto = str(self.cfg['target'].get('copyfuzzedto', ''))
-            logger.debug("Copying fuzzed file to " + copyfuzzedto)
-            filetools.copy_file(self.testcase.fuzzedfile.path, copyfuzzedto)
-
-        if 'postprocessfuzzed' in self.cfg['target']:
-            postprocessfuzzed = str(self.cfg['target']['postprocessfuzzed'])
-            logger.debug("Executing postprocess " + postprocessfuzzed)
-            os.system(postprocessfuzzed)
-
     def _set_bytemap(self):
         if self.fuzzed_content and not self.bytemap:
             self.bytemap = hamming.bytemap(self.seed, self.fuzzed_content)
@@ -678,10 +684,8 @@ class Minimizer(object):
         # start by copying the fuzzed_content file since as of now it's our
         # best fit
         filetools.copy_file(self.testcase.fuzzedfile.path, self.outputfile)
-
         # replace the fuzzedfile object in testcase with the minimized copy
-        self.testcase.fuzzedfile = BasicFile(self.outputfile)
-
+        self.testcase.fuzzedfile = BasicFile(self.outputfile, self.cfg['target']['mutate'])
         self.logger.info(
             'Attempting to minimize testcase(es) [%s]', self._crash_hashes_string())
 
@@ -755,7 +759,6 @@ class Minimizer(object):
                         'We have tried all %d files that are one byte closer than the current minimum', self.min_distance)
                     self.min_found = True
                     break
-
                 # remember this file for next time around
                 self.files_tried_at_hd[
                     self.min_distance].add(self.newfuzzed_md5)
@@ -764,7 +767,6 @@ class Minimizer(object):
                         self.min_distance].add(self.newfuzzed_md5)
 
                 self.print_intermediate_log()
-
                 if self.newfuzzed_md5 in self.files_tried:
                     # we've already seen this attempt, so skip ahead to the next one
                     # but still count it as a miss since our math assumes we're putting
@@ -776,25 +778,27 @@ class Minimizer(object):
                 # we didn't skip ahead, so it must have been new. Remember it
                 # now
                 self.files_tried.add(self.newfuzzed_md5)
-
                 # we have a better match, write it to a file
                 if not len(self.newfuzzed):
                     raise MinimizerError(
                         'New fuzzed_content content is empty.')
-
+		
                 self._write_file()
+		
 
                 if self.is_same_crash():
                     # record the result
                     # 1. copy the tempfile
-                    filetools.best_effort_move(self.tempfile, self.outputfile)
+
+		    #filetools.best_effort_move(self.tempfile, self.outputfile)
+		    filetools.best_effort_copy(self.tempfile, self.outputfile)
+
                     # 2. replace the fuzzed_content file in the crasher with
                     # the current one
-                    self.testcase.fuzzedfile = BasicFile(self.outputfile)
+                    self.testcase.fuzzedfile = BasicFile(self.outputfile, self.cfg['target']['mutate'])
                     # 3. replace the current fuzzed_content with newfuzzed
                     self.fuzzed_content = self.newfuzzed
                     self.min_distance = self.newfuzzed_hd
-
                     got_hit = True
 
                     if self.min_distance == 1:
@@ -817,7 +821,6 @@ class Minimizer(object):
                     # we missed. increment counter and try again
                     self.total_misses += 1
                     self.consecutive_misses += 1
-
                     # Fix for BFF-225
                     # There may be some situation that causes testcase uniqueness
                     # hashing to break. (e.g. BFF-224 ). Minimizer should bail
@@ -828,7 +831,6 @@ class Minimizer(object):
                                     MAX_OTHER_CRASHES)
                         self.min_found = True
                         break
-
             if not got_hit:
                 # we are self.confidence_level sure that self.target_size_guess is wrong
                 # so increment it by 1
@@ -842,8 +844,9 @@ class Minimizer(object):
                 if self.is_same_crash():
                     logger.debug(
                         'Fuzzed byte at offset %s is not relevant' % hex(offset))
-                    filetools.best_effort_move(self.tempfile, self.outputfile)
-                    self.testcase.fuzzedfile = BasicFile(self.outputfile)
+                    #filetools.best_effort_move(self.tempfile, self.outputfile)
+		    filetools.best_effort_copy(self.tempfile, self.outputfile)
+                    self.testcase.fuzzedfile = BasicFile(self.outputfile, self.cfg['target']['mutate'])
                     self.fuzzed_content = self.newfuzzed
                     self.bytemap.remove(offset)
 
@@ -901,20 +904,10 @@ class Minimizer(object):
 
         for (a, b) in itertools.izip(seed, fuzzed):
             if a != b and rand() > dc:
-                try:
-                    append(b)
-                except:
-                    logger.error('Cannot append array element, finishing minimizer')
-                    self.min_found = True
-                    break
+                append(b)
                 hd += 1
             else:
-                try:
-                    append(a)
-                except:
-                    logger.error('Cannot append array element, finishing minimizer')
-                    self.min_found = True
-                    break
+                append(a)
         return swapped, hd
         # Note that the above implementation is actually faster overall than the list
         # comprehension below since we're catching the hamming distance at the

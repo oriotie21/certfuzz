@@ -1,3 +1,45 @@
+### BEGIN LICENSE ###
+### Use of the CERT Basic Fuzzing Framework (BFF) and related source code is
+### subject to the following terms:
+### 
+### # LICENSE #
+### 
+### Copyright (C) 2010-2016 Carnegie Mellon University. All Rights Reserved.
+### 
+### Redistribution and use in source and binary forms, with or without
+### modification, are permitted provided that the following conditions are met:
+### 
+### 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following acknowledgments and disclaimers.
+### 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following acknowledgments and disclaimers in the documentation and/or other materials provided with the distribution.
+### 3. Products derived from this software may not include "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" in the name of such derived product, nor shall "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" be used to endorse or promote products derived from this software without prior written permission. For written permission, please contact permission@sei.cmu.edu.
+### 
+### # ACKNOWLEDGMENTS AND DISCLAIMERS: #
+### Copyright (C) 2010-2016 Carnegie Mellon University
+### 
+### This material is based upon work funded and supported by the Department of
+### Homeland Security under Contract No. FA8721-05-C-0003 with Carnegie Mellon
+### University for the operation of the Software Engineering Institute, a federally
+### funded research and development center.
+### 
+### Any opinions, findings and conclusions or recommendations expressed in this
+### material are those of the author(s) and do not necessarily reflect the views of
+### the United States Departments of Defense or Homeland Security.
+### 
+### NO WARRANTY. THIS CARNEGIE MELLON UNIVERSITY AND SOFTWARE ENGINEERING INSTITUTE
+### MATERIAL IS FURNISHED ON AN "AS-IS" BASIS. CARNEGIE MELLON UNIVERSITY MAKES NO
+### WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED, AS TO ANY MATTER
+### INCLUDING, BUT NOT LIMITED TO, WARRANTY OF FITNESS FOR PURPOSE OR
+### MERCHANTABILITY, EXCLUSIVITY, OR RESULTS OBTAINED FROM USE OF THE MATERIAL.
+### CARNEGIE MELLON UNIVERSITY DOES NOT MAKE ANY WARRANTY OF ANY KIND WITH RESPECT
+### TO FREEDOM FROM PATENT, TRADEMARK, OR COPYRIGHT INFRINGEMENT.
+### 
+### This material has been approved for public release and unlimited distribution.
+### 
+### CERT(R) is a registered mark of Carnegie Mellon University.
+### 
+### DM-0000736
+### END LICENSE ###
+
 '''
 Created on Oct 21, 2010
 
@@ -16,14 +58,13 @@ import stat
 import tempfile
 import time
 import zipfile
-
+from distutils.dir_util import copy_tree
 
 MAXDEPTH = 5
 SLEEPTIMER = 0.5
 BACKOFF_FACTOR = 2
 
 logger = logging.getLogger(__name__)
-
 
 def exponential_backoff(F):
     def wrapper(*args, **kwargs):
@@ -44,7 +85,6 @@ def exponential_backoff(F):
 
     return wrapper
 
-
 def mkdir_p(path):
     '''
     If directory exists, just return True
@@ -63,7 +103,6 @@ def mkdir_p(path):
 
 find_or_create_dir = mkdir_p
 
-
 # file system helpers
 def make_directories(*paths):
     '''
@@ -74,7 +113,6 @@ def make_directories(*paths):
         if not os.path.exists(d):
             mkdir_p(d)
 
-
 @exponential_backoff
 def rm_rf(path):
     '''
@@ -84,10 +122,8 @@ def rm_rf(path):
     '''
     shutil.rmtree(path)
 
-
 def delete_files(*files):
     delete_files2(files)
-
 
 @exponential_backoff
 def delete_files2(files):
@@ -105,7 +141,6 @@ def delete_files2(files):
             for x in os.listdir(d):
                 logger.debug('... %s', x)
 
-
 def best_effort_copy(src, dst):
     copied = False
     try:
@@ -115,7 +150,6 @@ def best_effort_copy(src, dst):
         logger.warning('Unable to copy file: %s', e)
     return copied
 
-
 def best_effort_delete(target):
     deleted = False
     try:
@@ -124,7 +158,6 @@ def best_effort_delete(target):
     except OSError, e:
         logger.warning('Unable to remove file: %s', e)
     return deleted
-
 
 def best_effort_move(src, dst):
     '''
@@ -148,7 +181,6 @@ def best_effort_move(src, dst):
             deleted = best_effort_delete(src)
     return copied, deleted
 
-
 def move_files(dst, *files):
     '''
     Move each file in files to dst.
@@ -162,7 +194,6 @@ def move_files(dst, *files):
         if os.path.exists(src):
             move_file(src, dst)
 
-
 def move_file(src, *targets):
     '''
     Move src to each dst in targets.
@@ -172,7 +203,6 @@ def move_file(src, *targets):
     '''
     move_file2(src=src, targets=targets)
 
-
 @exponential_backoff
 def move_file2(src=None, targets=[]):
     if not os.path.exists(src):
@@ -180,7 +210,6 @@ def move_file2(src=None, targets=[]):
 
     for dst in targets:
         shutil.move(src, dst)
-
 
 def copy_files(dst, *files):
     '''
@@ -195,10 +224,8 @@ def copy_files(dst, *files):
         if os.path.exists(src):
             copy_file(src, dst)
 
-
 def copy_file(src, *targets):
     copy_file2(src=src, targets=targets)
-
 
 @exponential_backoff
 def copy_file2(src=None, targets=[]):
@@ -211,12 +238,13 @@ def copy_file2(src=None, targets=[]):
         return
 
     for dst in targets:
-        shutil.copy(src, dst)
-
+        if(os.path.isdir(src)):
+            copy_tree(src, dst)
+        else:
+            shutil.copy(src, dst)
 
 def mkdtemp(base_dir=None):
     return tempfile.mkdtemp(prefix='BFF-', dir=base_dir)
-
 
 def write_oneline_to_file(line, dst, mode):
     '''
@@ -226,7 +254,6 @@ def write_oneline_to_file(line, dst, mode):
     with open(dst, mode) as f:
         f.write("%s\n" % line)
 
-
 def get_file_md5(infile):
     h = hashlib.md5()
 
@@ -235,17 +262,17 @@ def get_file_md5(infile):
 
     return h.hexdigest()
 
-
 @exponential_backoff
-def write_file2(data=None, dst=None):
+def write_file2(data=None,child="", dst=None):
+    #prepare for project directory
+    if os.path.isdir(dst):
+        dst = os.path.join(dst, child)
     logger.debug('Write to %s', dst)
     with open(dst, 'wb') as output_file:
         output_file.write(data)
 
-
-def write_file(data, dst):
-    write_file2(data=data, dst=dst)
-
+def write_file(data, dst,child=""):
+    write_file2(data=data,child=child, dst=dst)
 
 def get_newpath(oldpath, str_to_insert):
     '''
@@ -254,19 +281,16 @@ def get_newpath(oldpath, str_to_insert):
     :param oldpath:
     :param str_to_insert:
     '''
-    origdir = os.path.dirname(oldpath)
-    origfile = os.path.basename(oldpath)
-    if '.' in origfile:
+    if '.' in oldpath:
         # Split on first '.' to retain multiple dotted extensions
-        root = origfile.split('.', 1)[0]
-        ext = '.' + origfile.split('.', 1)[1]
+        root = oldpath.split('.', 1)[0]
+        ext = '.' + oldpath.split('.', 1)[1]
         ext = ext.replace(' ', '')
     else:
-        root = oldfile
+        root = oldpath
         ext = ''
-    newfile = ''.join([root, str_to_insert, ext])
-    return os.path.join(origdir, newfile)
-
+    newpath = ''.join([root, str_to_insert, ext])
+    return newpath
 
 def all_files_nonzero_length(root, patterns='*', single_level=False, yield_folders=False):
     '''
@@ -279,7 +303,6 @@ def all_files_nonzero_length(root, patterns='*', single_level=False, yield_folde
     for filepath in all_files(root, patterns, single_level, yield_folders):
         if os.path.getsize(filepath):
             yield filepath
-
 
 def delete_files_or_dirs(dirlist, print_via_log=True):
     skipped_items = []
@@ -308,7 +331,6 @@ def delete_files_or_dirs(dirlist, print_via_log=True):
             skipped_items.append((item_path, 'Not a file or dir'))
     return skipped_items
 
-
 def delete_contents_of(dirs, print_via_log=True):
     dirlist = []
     skipped_items = []
@@ -326,7 +348,6 @@ def delete_contents_of(dirs, print_via_log=True):
 
     return skipped_items
 
-
 def check_zip_fh(file_like_content):
     # Make sure that it's not an embedded zip (e.g. a DOC file from Office
     # 2007)
@@ -339,16 +360,17 @@ def check_zip_fh(file_like_content):
     else:
         return zipfile.is_zipfile(file_like_content)
 
-
 def check_zip_content(content):
     file_like_content = StringIO.StringIO(content)
     return check_zip_fh(file_like_content)
 
-
 def check_zip_file(filepath):
+    #prepare for project folder
+    if not os.path.isfile(filepath):
+        return False
+       
     with open(filepath, 'rb') as filehandle:
         return check_zip_fh(filehandle)
-
 
 def get_zipcontents(filepath):
     # If the file is zip-based, fuzz the contents rather than the container
@@ -366,21 +388,21 @@ def get_zipcontents(filepath):
     tempzip.close()
     return unzippedbytes
 
-
 def make_writable(filename):
     mode = os.stat(filename).st_mode
     os.chmod(filename, mode | stat.S_IWRITE)
 
-
-def _read_file(path, perm):
+def _read_file(_path, perm, child=""):
     '''
     Generic file read
     :param path:
     :param perm:
     '''
+    path = _path
+    if os.path.isdir(path):
+        path = os.path.join(_path, child)
     with open(path, perm) as f:
         return f.read()
-
 
 def read_text_file(textfile):
     '''
@@ -388,13 +410,11 @@ def read_text_file(textfile):
     '''
     return _read_file(textfile, 'r')
 
-
-def read_bin_file(binfile):
+def read_bin_file(binfile, child=""):
     '''
     Read binary file
     '''
-    return _read_file(binfile, 'rb')
-
+    return _read_file(binfile, 'rb', child)
 
 # Adapted from Python Cookbook 2nd Ed. p.88
 def all_files(root, patterns='*', single_level=False, yield_folders=False):

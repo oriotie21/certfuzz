@@ -1,7 +1,48 @@
+### BEGIN LICENSE ###
+### Use of the CERT Basic Fuzzing Framework (BFF) and related source code is
+### subject to the following terms:
+### 
+### # LICENSE #
+### 
+### Copyright (C) 2010-2016 Carnegie Mellon University. All Rights Reserved.
+### 
+### Redistribution and use in source and binary forms, with or without
+### modification, are permitted provided that the following conditions are met:
+### 
+### 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following acknowledgments and disclaimers.
+### 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following acknowledgments and disclaimers in the documentation and/or other materials provided with the distribution.
+### 3. Products derived from this software may not include "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" in the name of such derived product, nor shall "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" be used to endorse or promote products derived from this software without prior written permission. For written permission, please contact permission@sei.cmu.edu.
+### 
+### # ACKNOWLEDGMENTS AND DISCLAIMERS: #
+### Copyright (C) 2010-2016 Carnegie Mellon University
+### 
+### This material is based upon work funded and supported by the Department of
+### Homeland Security under Contract No. FA8721-05-C-0003 with Carnegie Mellon
+### University for the operation of the Software Engineering Institute, a federally
+### funded research and development center.
+### 
+### Any opinions, findings and conclusions or recommendations expressed in this
+### material are those of the author(s) and do not necessarily reflect the views of
+### the United States Departments of Defense or Homeland Security.
+### 
+### NO WARRANTY. THIS CARNEGIE MELLON UNIVERSITY AND SOFTWARE ENGINEERING INSTITUTE
+### MATERIAL IS FURNISHED ON AN "AS-IS" BASIS. CARNEGIE MELLON UNIVERSITY MAKES NO
+### WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED, AS TO ANY MATTER
+### INCLUDING, BUT NOT LIMITED TO, WARRANTY OF FITNESS FOR PURPOSE OR
+### MERCHANTABILITY, EXCLUSIVITY, OR RESULTS OBTAINED FROM USE OF THE MATERIAL.
+### CARNEGIE MELLON UNIVERSITY DOES NOT MAKE ANY WARRANTY OF ANY KIND WITH RESPECT
+### TO FREEDOM FROM PATENT, TRADEMARK, OR COPYRIGHT INFRINGEMENT.
+### 
+### This material has been approved for public release and unlimited distribution.
+### 
+### CERT(R) is a registered mark of Carnegie Mellon University.
+### 
+### DM-0000736
+### END LICENSE ###
+
 import collections
 import logging
 import zipfile
-import os
 
 from certfuzz.fuzztools.filetools import check_zip_file, write_file
 from certfuzz.fuzztools.filetools import exponential_backoff
@@ -9,9 +50,7 @@ from certfuzz.minimizer.minimizer_base import Minimizer as MinimizerBase
 from certfuzz.minimizer.errors import WindowsMinimizerError
 from certfuzz.debuggers.msec import MsecDebugger
 
-
 logger = logging.getLogger(__name__)
-
 
 class WindowsMinimizer(MinimizerBase):
     use_watchdog = False
@@ -21,10 +60,8 @@ class WindowsMinimizer(MinimizerBase):
                  seedfile_as_target=False, bitwise=False, confidence=0.999,
                  logfile=None, tempdir=None, maxtime=3600, preferx=True,
                  keep_uniq_faddr=False, watchcpu=False):
-
         self.saved_arcinfo = None
         self.is_zipfile = check_zip_file(testcase.fuzzedfile.path)
-
         MinimizerBase.__init__(self, cfg, testcase, crash_dst_dir,
                                seedfile_as_target, bitwise, confidence,
                                logfile, tempdir, maxtime, preferx,
@@ -130,14 +167,4 @@ class WindowsMinimizer(MinimizerBase):
         if self.is_zipfile:
             self._writezip()
         else:
-            write_file(''.join(self.newfuzzed), self.tempfile)
-
-            if 'copyfuzzedto' in self.cfg['target']:
-                copyfuzzedto = str(self.cfg['target'].get('copyfuzzedto', ''))
-                logger.debug("Copying fuzzed file to " + copyfuzzedto)
-                write_file(''.join(self.newfuzzed), copyfuzzedto)
-
-            if 'postprocessfuzzed' in self.cfg['target']:
-                postprocessfuzzed = str(self.cfg['target']['postprocessfuzzed'])
-                logger.debug("Executing postprocess " + postprocessfuzzed)
-                os.system(postprocessfuzzed)
+            write_file(''.join(self.newfuzzed), self.tempfile,child=self.cfg['target']['mutate'])

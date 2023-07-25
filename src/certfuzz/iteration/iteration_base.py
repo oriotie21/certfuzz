@@ -1,3 +1,45 @@
+### BEGIN LICENSE ###
+### Use of the CERT Basic Fuzzing Framework (BFF) and related source code is
+### subject to the following terms:
+### 
+### # LICENSE #
+### 
+### Copyright (C) 2010-2016 Carnegie Mellon University. All Rights Reserved.
+### 
+### Redistribution and use in source and binary forms, with or without
+### modification, are permitted provided that the following conditions are met:
+### 
+### 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following acknowledgments and disclaimers.
+### 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following acknowledgments and disclaimers in the documentation and/or other materials provided with the distribution.
+### 3. Products derived from this software may not include "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" in the name of such derived product, nor shall "Carnegie Mellon University," "SEI" and/or "Software Engineering Institute" be used to endorse or promote products derived from this software without prior written permission. For written permission, please contact permission@sei.cmu.edu.
+### 
+### # ACKNOWLEDGMENTS AND DISCLAIMERS: #
+### Copyright (C) 2010-2016 Carnegie Mellon University
+### 
+### This material is based upon work funded and supported by the Department of
+### Homeland Security under Contract No. FA8721-05-C-0003 with Carnegie Mellon
+### University for the operation of the Software Engineering Institute, a federally
+### funded research and development center.
+### 
+### Any opinions, findings and conclusions or recommendations expressed in this
+### material are those of the author(s) and do not necessarily reflect the views of
+### the United States Departments of Defense or Homeland Security.
+### 
+### NO WARRANTY. THIS CARNEGIE MELLON UNIVERSITY AND SOFTWARE ENGINEERING INSTITUTE
+### MATERIAL IS FURNISHED ON AN "AS-IS" BASIS. CARNEGIE MELLON UNIVERSITY MAKES NO
+### WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED, AS TO ANY MATTER
+### INCLUDING, BUT NOT LIMITED TO, WARRANTY OF FITNESS FOR PURPOSE OR
+### MERCHANTABILITY, EXCLUSIVITY, OR RESULTS OBTAINED FROM USE OF THE MATERIAL.
+### CARNEGIE MELLON UNIVERSITY DOES NOT MAKE ANY WARRANTY OF ANY KIND WITH RESPECT
+### TO FREEDOM FROM PATENT, TRADEMARK, OR COPYRIGHT INFRINGEMENT.
+### 
+### This material has been approved for public release and unlimited distribution.
+### 
+### CERT(R) is a registered mark of Carnegie Mellon University.
+### 
+### DM-0000736
+### END LICENSE ###
+
 '''
 Created on Feb 13, 2014
 
@@ -5,6 +47,7 @@ Created on Feb 13, 2014
 '''
 import logging
 import tempfile
+import traceback as tb
 import abc
 from certfuzz.fuzztools.filetools import rm_rf
 from certfuzz.fuzzers.errors import FuzzerExhaustedError, \
@@ -12,12 +55,11 @@ from certfuzz.fuzzers.errors import FuzzerExhaustedError, \
 from certfuzz.minimizer.errors import MinimizerError
 from certfuzz.debuggers.output_parsers.errors import DebuggerFileError
 from certfuzz.runners.errors import RunnerRegistryError
-
+import os
 logger = logging.getLogger(__name__)
 
 IOERROR_COUNT = 0
 MAX_IOERRORS = 5
-
 
 class IterationBase(object):
     __metaclass__ = abc.ABCMeta
@@ -131,6 +173,7 @@ class IterationBase(object):
             # this is fatal, pass it up
             handled = False
         elif etype is IOError:
+            tb.print_tb(traceback)
             IOERROR_COUNT += 1
             if IOERROR_COUNT > MAX_IOERRORS:
                 # something is probably wrong, we should crash
@@ -140,6 +183,7 @@ class IterationBase(object):
                 # we can keep going for a bit
                 logger.error(
                     'Intercepted IOError, will try to continue: %s', value)
+		
                 handled = True
 
         if self.debug and etype:
@@ -155,11 +199,12 @@ class IterationBase(object):
 
     def _pre_fuzz(self):
         self.fuzzer = self.fuzzer_cls(
-            self.seedfile, self.working_dir, self.seednum, self._fuzz_opts)
+            self.seedfile, self.working_dir, self.seednum, self._fuzz_opts, self.cfg['target']['mutate'])
 
     def _fuzz(self):
         with self.fuzzer:
             self.fuzzer.fuzz()
+        
 
         self.r = self.fuzzer.range
         if self.r is not None:
@@ -172,19 +217,6 @@ class IterationBase(object):
         fuzzed_file = self.fuzzer.output_file_path
         workingdir_base = self.working_dir
         self.cmd_template = self.cfg['target']['cmdline_template']
-
-        if 'copyfuzzedto' in self.cfg['target']:
-            from shutil import copyfile
-            copyfuzzedto = str(self.cfg['target'].get('copyfuzzedto', ''))
-            logger.debug("Copying fuzzed file to " + copyfuzzedto)
-            copyfile(fuzzed_file, copyfuzzedto)
-
-        if 'postprocessfuzzed' in self.cfg['target']:
-            import os
-            postprocessfuzzed = str(self.cfg['target']['postprocessfuzzed'])
-            logger.debug("Executing postprocess " + postprocessfuzzed)
-            os.system(postprocessfuzzed)
-
         self.runner = self.runner_cls(
             self._runner_options, self.cmd_template, fuzzed_file, workingdir_base)
 

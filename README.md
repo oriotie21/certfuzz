@@ -1,10 +1,70 @@
-This project contains the source code for the CERT Basic Fuzzing Framework (BFF)
-
-BFF for Windows was formerly known as the CERT Failure Observation Engine (FOE).
+This project is modified version of certfuzz.
 
 # If you are looking for runnable code, you should download the latest releases at: #
 
 * BFF (linux, OSX) [https://vuls.cert.org/confluence/display/tools/CERT+BFF+-+Basic+Fuzzing+Framework](https://vuls.cert.org/confluence/display/tools/CERT+BFF+-+Basic+Fuzzing+Framework "BFF")
+
+
+
+# What's changed? #
+
+When inputs are different from command line argument (especially for directory based seedfile), this modified version of BFF can be used. 
+
+## Example scenario ## 
+```
+C:\test\project1
+    |- project.prj
+    |- content.bin
+    |- resource.png
+```
+
+Assume that project file structure looks like this,
+When we want to load project by command line, project.prj file's location has to be speeicifed 
+(example command line : "C:\bins\example.exe C:\test\project1\project.prj")
+
+But we want to fuzz content file of the project, (content.bin in this case) 
+
+then, set the 'target' category of bff.yaml like this..
+```
+target:
+    program: C:\bins\example.exe
+    name: project.prj
+    mutate: content.bin
+    cmdline_template: $PROGRAM $SEEDFILE
+
+```
+seedfile folder looks like...
+```
+<BFF installed location>\seedfiles
+    |-project1
+        |- project.prj
+        |- content.bin
+        |- resource.png
+    |-project2
+        |- project.prj
+        |- content.bin
+        |- resource.png
+    |-project3
+        |- project.prj
+        |- content.bin
+        |- resource.png
+```
+then, it will mutate content.bin, while using project.prj location as $SEEDFILE argument
+
+# How to apply to original BFF? #
+Currently, working only on windows. 
+
+1. copy src\certfuzz directory to <'BFF installed location'>\certfuzz
+2. go to <'BFF installed location'>\bff.yaml and set the value 'target' to...
+```
+target:
+    program:
+    name: ""
+    mutate: ""
+    cmdline_template:
+
+```
+3. put the seedfiles in and enjoy fuzz
 
 # Using this code #
 
